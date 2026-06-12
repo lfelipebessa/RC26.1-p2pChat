@@ -1,0 +1,14 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Logs da aplicacao
+*.log
+logs/
+
+# Editor / SO
+.vscode/
+.idea/
+.DS_Store
