@@ -17,9 +17,9 @@ Quadro de tarefas do projeto. Como usar:
 - [x] **F2.2** (Luiz) Teste manual contra o servidor público (pyp2p.mfcaetano.cc:8080): registrar, descobrir a si mesmo, desregistrar. Documentar a saída.
 
 ## Fase 3 — Conexões entre peers
-- [ ] **F3.1** `peer_connection.py`: servidor TCP de escuta (aceita conexões inbound) e abertura de conexões outbound.
-- [ ] **F3.2** Handshake HELLO/HELLO_OK nos dois sentidos; conexão só vira "ativa" após o handshake; rejeitar mensagens antes dele.
-- [ ] **F3.3** Evitar conexão duplicada (item da rubrica): índice de conexões ativas por `peer_id` (inbound + outbound); se já existe conexão, não abrir outra; desempate determinístico (menor `peer_id` mantém a outbound). Não conectar em si mesmo.
+- [x] **F3.1** (Luiz, Luciano) `peer_connection.py`: servidor TCP de escuta (aceita conexões inbound) e abertura de conexões outbound. *(conexão outbound inicial do Luciano; servidor/inbound e reescrita async do Luiz)*
+- [x] **F3.2** (Luiz) Handshake HELLO/HELLO_OK nos dois sentidos; conexão só vira "ativa" após o handshake; rejeitar mensagens antes dele.
+- [x] **F3.3** (Luiz) Evitar conexão duplicada (item da rubrica): índice de conexões ativas por `peer_id` (inbound + outbound); se já existe conexão, não abrir outra; desempate determinístico (menor `peer_id` mantém a outbound). Não conectar em si mesmo.
 
 ## Fase 4 — Mensageria
 - [ ] **F4.1** `message_router.py`: SEND com `require_ack`, resposta ACK, timeout de 5s sem ACK gera WARNING no log; deduplicação por `msg_id`.
