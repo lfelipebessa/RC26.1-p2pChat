@@ -22,8 +22,8 @@ Quadro de tarefas do projeto. Como usar:
 - [x] **F3.3** (Luiz) Evitar conexão duplicada (item da rubrica): índice de conexões ativas por `peer_id` (inbound + outbound); se já existe conexão, não abrir outra; desempate determinístico (menor `peer_id` mantém a outbound). Não conectar em si mesmo.
 
 ## Fase 4 — Mensageria
-- [ ] **F4.1** `message_router.py`: SEND com `require_ack`, resposta ACK, timeout de 5s sem ACK gera WARNING no log; deduplicação por `msg_id`.
-- [ ] **F4.2** PUB para `#namespace` (só peers do namespace) e `*` (todos os conectados).
+- [x] **F4.1** (Luiz, Luciano) `message_router.py`: SEND com `require_ack`, resposta ACK, timeout de 5s sem ACK gera WARNING no log; deduplicação por `msg_id`. *(stub inicial do Luciano; reescrita async do Luiz)*
+- [x] **F4.2** (Luiz) PUB para `#namespace` (só peers do namespace) e `*` (todos os conectados).
 
 ## Fase 5 — Keep-alive
 - [ ] **F5.1** `keep_alive.py`: loop de PING a cada 30s (configurável), resposta PONG imediata, cálculo de RTT por peer.
