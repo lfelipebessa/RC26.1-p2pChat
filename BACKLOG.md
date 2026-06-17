@@ -26,8 +26,8 @@ Quadro de tarefas do projeto. Como usar:
 - [x] **F4.2** (Luiz) PUB para `#namespace` (só peers do namespace) e `*` (todos os conectados).
 
 ## Fase 5 — Keep-alive
-- [ ] **F5.1** `keep_alive.py`: loop de PING a cada 30s (configurável), resposta PONG imediata, cálculo de RTT por peer.
-- [ ] **F5.2** RTT médio por peer acumulado + log periódico (ex.: `[KeepAlive] Sent 2 PINGs | Average RTT = 43.2 ms`).
+- [x] **F5.1** (Luiz, Luciano) `keep_alive.py`: loop de PING a cada 30s (configurável), resposta PONG imediata, cálculo de RTT por peer. *(PING/PONG inicial do Luciano com threading; reescrita async + RTT do Luiz)*
+- [x] **F5.2** (Luiz) RTT médio por peer acumulado + log periódico (ex.: `[KeepAlive] Sent 2 PINGs | Average RTT = 43.2 ms`).
 
 ## Fase 6 — PeerTable e reconexão
 - [ ] **F6.1** `peer_table.py`: estados (`DISCOVERED`, `CONNECTING`, `CONNECTED`, `STALE`, `CLOSED`), backoff exponencial e limite `max_reconnect_attempts` do config.
