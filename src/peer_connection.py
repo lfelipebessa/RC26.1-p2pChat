@@ -4,6 +4,10 @@ outbound, handshake HELLO/HELLO_OK e registro de conexões (sem duplicar).
 Cada peer é cliente E servidor: aceita conexões e também inicia as suas.
 Para não abrir duas conexões com o mesmo peer, o desempate é determinístico:
 só o peer de MENOR peer_id inicia a outbound; o de maior espera a inbound.
+
+Após o handshake, cada conexão roda um read-loop que lê mensagens e as
+despacha para um handler (definido pelo cliente) — é por aí que SEND/ACK/PUB
+(e, nas próximas fases, PING/PONG/BYE) chegam.
 """
 import asyncio
 import logging
@@ -56,6 +60,18 @@ class PeerConnection:
         self.state = "CONNECTED"
         return True
 
+    async def read_loop(self, handler):
+        """Lê mensagens e despacha cada uma para handler(self, msg) até a conexão fechar."""
+        while True:
+            msg = await read_message(self.reader)
+            if msg is None:
+                break
+            try:
+                await handler(self, msg)
+            except Exception:
+                self.logger.exception("Erro ao tratar mensagem de %s", self.peer_id)
+        self.state = "CLOSED"
+
     async def close(self):
         self.state = "CLOSED"
         self.writer.close()
@@ -67,14 +83,17 @@ class PeerConnection:
 
 class PeerServer:
     """Escuta conexões inbound, abre conexões outbound e mantém o registro de
-    conexões ativas (uma por peer_id)."""
+    conexões ativas (uma por peer_id). Se houver message_handler, cada conexão
+    roda um read-loop que despacha as mensagens recebidas."""
 
-    def __init__(self, my_peer_id, host, port):
+    def __init__(self, my_peer_id, host, port, message_handler=None):
         self.my_peer_id = my_peer_id
         self.host = host
         self.port = port
+        self.message_handler = message_handler   # async (conn, msg) -> None
         self.connections = {}               # peer_id -> PeerConnection
         self.server = None
+        self._tasks = set()
         self.logger = logging.getLogger("PeerServer")
 
     async def start(self):
@@ -94,6 +113,7 @@ class PeerServer:
             await conn.close()
             return
         self.logger.info("Inbound connected: %s", conn.peer_id)
+        self._start_read_loop(conn)
 
     async def connect_to(self, host, port, peer_id):
         """Abre uma conexão outbound com um peer (o DISCOVER nos deu o peer_id).
@@ -116,7 +136,6 @@ class PeerServer:
             await conn.close()
             return None
         if conn.peer_id != peer_id:
-            # o outro lado se identificou diferente do que o DISCOVER prometeu
             self.logger.warning(
                 "peer_id inesperado: esperava %s, recebi %s; fechando", peer_id, conn.peer_id
             )
@@ -126,6 +145,7 @@ class PeerServer:
             await conn.close()
             return self.connections.get(conn.peer_id)
         self.logger.info("Outbound connected: %s", conn.peer_id)
+        self._start_read_loop(conn)
         return conn
 
     def _register(self, conn):
@@ -136,6 +156,20 @@ class PeerServer:
         self.connections[conn.peer_id] = conn
         return conn
 
+    def _start_read_loop(self, conn):
+        if self.message_handler is None:
+            return
+        task = asyncio.create_task(self._run_conn(conn))
+        self._tasks.add(task)
+        task.add_done_callback(self._tasks.discard)
+
+    async def _run_conn(self, conn):
+        await conn.read_loop(self.message_handler)
+        if self.connections.get(conn.peer_id) is conn:
+            del self.connections[conn.peer_id]
+        await conn.close()              # libera o socket/transport ao fim do read-loop
+        self.logger.info("Conexão com %s encerrada", conn.peer_id)
+
     async def stop(self):
         if self.server:                 # para de aceitar novas conexões primeiro
             self.server.close()
@@ -143,3 +177,7 @@ class PeerServer:
         for conn in list(self.connections.values()):
             await conn.close()
         self.connections.clear()
+        for task in list(self._tasks):
+            task.cancel()
+        if self._tasks:
+            await asyncio.gather(*self._tasks, return_exceptions=True)
