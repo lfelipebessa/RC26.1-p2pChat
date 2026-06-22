@@ -138,3 +138,47 @@ class P2PClient:
         self.logger.info("Cliente %s no ar (escuta %s).", self.my_peer_id, self.config.listen_port)
         await self._stop.wait()
         await self._shutdown()           # implementado numa fase futura
+
+    def cmd_conn(self):   return self.state.render_conns(self.server, self.table)
+    def cmd_rtt(self):    return self.state.render_rtt(self.keep_alive, self.server)
+    def is_stopping(self): return self._stop is not None and self._stop.is_set()
+    def request_stop(self):
+        if self._stop: self._stop.set()
+
+    def cmd_reconnect(self):
+        n = self.table.reset_stale()
+        self.wake_reconcile()
+        print(f"reconciliação forçada ({n} peer(s) reativados)")
+
+    def cmd_log(self, nivel):
+        import logging as _lg
+        lvl = getattr(_lg, nivel.upper(), None)
+        if lvl is None:
+            print(f"nível inválido: {nivel}"); return
+        for h in _lg.getLogger().handlers:
+            if isinstance(h, _lg.StreamHandler) and not getattr(h, "baseFilename", None):
+                h.setLevel(lvl)
+        print(f"nível de console -> {nivel.upper()}")
+
+    async def cmd_peers(self, arg):
+        ns = self.config.namespace if (arg in (None, "*")) else arg.lstrip("#")
+        try:
+            peers = await self.rendezvous.discover(ns)
+        except RendezvousError as e:
+            print(f"DISCOVER falhou: {e}"); return
+        for p in peers:
+            if f"{p['name']}@{p['namespace']}" == self.my_peer_id: continue
+            self.table.upsert_from_discover(p)
+        self.wake_reconcile()
+        print(self.state.render_peers(self.table))
+
+    async def cmd_msg(self, peer_id, texto):
+        try:
+            ok = await self.router.send(peer_id, texto)
+        except OSError:
+            ok = False; self.table.record_failure(peer_id, "envio falhou")
+        print("ACK ok" if ok else "sem ACK (timeout ou sem conexão)")
+
+    async def cmd_pub(self, escopo, texto):
+        n = await self.router.publish(escopo, texto)
+        print(f"PUB enviado a {n} peer(s)")
