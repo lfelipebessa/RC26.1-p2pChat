@@ -1,0 +1,200 @@
+================================================================================
+EVIDÊNCIAS DOS 6 CENÁRIOS MÍNIMOS — Chat P2P (Redes de Computadores)
+Data da execução: 2026-06-22
+================================================================================
+
+SETUP DO TESTE
+--------------
+Dois peers na MESMA máquina:
+  - alice@RCteste  (escuta na porta 4000)
+  - bob@RCteste    (escuta na porta 4001)
+
+Rendezvous: instância LOCAL de teste em 127.0.0.1:8090 (tests/local_rendezvous.py).
+
+POR QUE UM RENDEZVOUS LOCAL?
+O servidor público (pyp2p.mfcaetano.cc) responde ao REGISTER/DISCOVER com o
+IP PÚBLICO que ele enxerga (ex.: 179.214.105.199). Dois peers na mesma máquina
+registram o mesmo IP público, e abrir uma conexão TCP nesse IP a partir da
+própria rede depende de "NAT hairpinning", que o roteador doméstico normalmente
+NÃO faz (sondagem confirmou: ConnectionRefusedError no IP público; OK em 127.0.0.1).
+Por isso, para testar a conexão peer-a-peer localmente, usamos um rendezvous
+local que enxerga as conexões vindas de 127.0.0.1 e devolve 127.0.0.1 — endereço
+alcançável na própria máquina. O fluxo do cliente (REGISTER/DISCOVER/UNREGISTER,
+descoberta automática, conexão, handshake, etc.) é exatamente o mesmo.
+Obs.: contra o servidor público, REGISTER/DISCOVER/UNREGISTER e o backoff de
+reconexão já foram demonstrados funcionando; só a conexão peer-a-peer local é que
+exige o rendezvous local (ou dois computadores em redes diferentes).
+
+MAPA CENÁRIO -> O QUE PROCURAR NO LOG ABAIXO
+  Cenário 1 (SEND/ACK + PUB) ... "SEND de alice", "[MSG]", "ACK ok", "PUB ... para N peer(s)", "[PUB]"
+  Cenário 2 (descoberta)     ... "REGISTER ok ip=127.0.0.1", "Novo peer descoberto", "Outbound/Inbound connected", DISCOVER recorrente
+  Cenário 3 (PING/PONG+RTT)  ... "Sent N PINGs | Average RTT", "PONG de ... RTT = ... ms", "/rtt"
+  Cenário 4 (reconexão)      ... "Conexão com bob encerrada", "STALE (tentativa n/5, retry em Ds)" 1->2->4->8s, reconecta
+  Cenário 5 (BYE/BYE_OK)     ... "BYE de alice (motivo=quit)", "BYE_OK de bob; sessão encerrada", "UNREGISTER ok", exit 0
+  Cenário 6 (comandos CLI)   ... /peers /conn /msg /pub /rtt /log /quit (e /reconnect nos testes de backoff)
+
+================================================================================
+TRANSCRIÇÃO DA EXECUÇÃO (prefixos: [rendez]=rendezvous local, [alice], [bob])
+================================================================================
+[   0.0s][rendez] 2026-06-22 19:45:29,410 [rendez] Rendezvous LOCAL escutando em 127.0.0.1:8090
+
+======================================================================
+[   0.5s]  CENÁRIO 2: descoberta automática via rendezvous + conexão peer-a-peer
+======================================================================
+[   0.6s][alice ] 2026-06-22 19:45:29,949 [main] Cliente iniciado: alice@RCteste (escuta na porta 4000)
+[   0.6s][bob   ] 2026-06-22 19:45:29,949 [main] Cliente iniciado: bob@RCteste (escuta na porta 4001)
+[   0.6s][bob   ] 2026-06-22 19:45:29,955 [PeerServer] Escutando em 0.0.0.0:4001
+[   0.6s][alice ] 2026-06-22 19:45:29,955 [PeerServer] Escutando em 0.0.0.0:4000
+[   0.6s][alice ] 2026-06-22 19:45:29,955 [P2PClient] Cliente alice@RCteste no ar (escuta 4000).
+[   0.6s][bob   ] 2026-06-22 19:45:29,955 [P2PClient] Cliente bob@RCteste no ar (escuta 4001).
+[   0.6s][alice ] CLI pronta. /help para ver os comandos.
+[   0.6s][bob   ] CLI pronta. /help para ver os comandos.
+[   0.6s][rendez] 2026-06-22 19:45:29,957 [rendez] REGISTER bob@RCteste -> 127.0.0.1:4001 (ttl=3600)
+[   0.6s][rendez] 2026-06-22 19:45:29,958 [rendez] REGISTER alice@RCteste -> 127.0.0.1:4000 (ttl=3600)
+[   0.6s][rendez] 2026-06-22 19:45:29,958 [rendez] DISCOVER ns=RCteste -> 2 peer(s)
+[   0.6s][rendez] 2026-06-22 19:45:29,958 [rendez] DISCOVER ns=RCteste -> 2 peer(s)
+[   0.6s][bob   ] > 2026-06-22 19:45:29,958 [Rendezvous] REGISTER ok: bob@RCteste ttl=3600 ip=127.0.0.1
+[   0.6s][alice ] > 2026-06-22 19:45:29,958 [Rendezvous] REGISTER ok: alice@RCteste ttl=3600 ip=127.0.0.1
+[   0.6s][alice ] 2026-06-22 19:45:29,958 [Rendezvous] DISCOVER ok: 2 peer(s)
+[   0.6s][bob   ] 2026-06-22 19:45:29,958 [Rendezvous] DISCOVER ok: 2 peer(s)
+[   0.6s][alice ] 2026-06-22 19:45:29,958 [PeerTable] Novo peer descoberto: bob@RCteste
+[   0.6s][bob   ] 2026-06-22 19:45:29,958 [PeerTable] Novo peer descoberto: alice@RCteste
+[   0.6s][bob   ] 2026-06-22 19:45:29,958 [PeerServer] Inbound connected: alice@RCteste
+[   0.6s][alice ] 2026-06-22 19:45:29,958 [PeerServer] Outbound connected: bob@RCteste
+[   5.6s][rendez] 2026-06-22 19:45:34,960 [rendez] DISCOVER ns=RCteste -> 2 peer(s)
+[   5.6s][rendez] 2026-06-22 19:45:34,961 [rendez] DISCOVER ns=RCteste -> 2 peer(s)
+[   5.6s][bob   ] 2026-06-22 19:45:34,961 [Rendezvous] DISCOVER ok: 2 peer(s)
+[   5.6s][alice ] 2026-06-22 19:45:34,961 [Rendezvous] DISCOVER ok: 2 peer(s)
+[   6.6s][alice ] 2026-06-22 19:45:35,957 [KeepAlive] Sent 1 PINGs | Average RTT = 0.5 ms
+[   6.6s][bob   ] 2026-06-22 19:45:35,958 [KeepAlive] Sent 1 PINGs | Average RTT = 0.4 ms
+[   8.5s][DRIVE ] alice <- /peers
+[   8.5s][rendez] 2026-06-22 19:45:37,893 [rendez] DISCOVER ns=RCteste -> 2 peer(s)
+[   8.5s][alice ] 2026-06-22 19:45:37,894 [Rendezvous] DISCOVER ok: 2 peer(s)
+[   8.5s][alice ] Peers conhecidos:
+[   8.5s][alice ]   bob@RCteste              CONNECTED   127.0.0.1:4001
+[   9.5s][DRIVE ] alice <- /conn
+[   9.5s][DRIVE ] bob <- /conn
+[   9.5s][alice ] > Conexões ativas:
+[   9.5s][alice ]   bob@RCteste              outbound  CONNECTED
+[   9.5s][bob   ] Conexões ativas:
+[   9.5s][bob   ]   alice@RCteste            inbound   CONNECTED
+[   9.6s][alice ] > 2026-06-22 19:45:38,958 [KeepAlive] Sent 1 PINGs | Average RTT = 0.8 ms
+[   9.6s][bob   ] > 2026-06-22 19:45:38,959 [KeepAlive] Sent 1 PINGs | Average RTT = 0.5 ms
+[  10.6s][rendez] 2026-06-22 19:45:39,964 [rendez] DISCOVER ns=RCteste -> 2 peer(s)
+[  10.6s][rendez] 2026-06-22 19:45:39,964 [rendez] DISCOVER ns=RCteste -> 2 peer(s)
+[  10.6s][alice ] 2026-06-22 19:45:39,964 [Rendezvous] DISCOVER ok: 2 peer(s)
+[  10.6s][bob   ] 2026-06-22 19:45:39,965 [Rendezvous] DISCOVER ok: 2 peer(s)
+
+======================================================================
+[  11.5s]  CENÁRIO 1: SEND (com ACK) e PUB (#namespace e *)
+======================================================================
+[  11.5s][DRIVE ] alice <- /msg bob@RCteste Ola bob, esta eh uma mensagem direta (SEND)
+[  11.5s][bob   ] 2026-06-22 19:45:40,895 [Router] SEND de alice@RCteste: Ola bob, esta eh uma mensagem direta (SEND)
+[  11.5s][bob   ] 
+[  11.5s][bob   ] [MSG] alice@RCteste: Ola bob, esta eh uma mensagem direta (SEND)
+[  11.5s][alice ] ACK ok
+[  12.6s][alice ] > 2026-06-22 19:45:41,960 [KeepAlive] Sent 1 PINGs | Average RTT = 0.9 ms
+[  12.6s][bob   ] > 2026-06-22 19:45:41,961 [KeepAlive] Sent 1 PINGs | Average RTT = 0.5 ms
+[  13.5s][DRIVE ] alice <- /pub #RCteste broadcast para o namespace RCteste
+[  13.5s][alice ] 2026-06-22 19:45:42,896 [Router] PUB #RCteste para 1 peer(s)
+[  13.5s][alice ] PUB enviado a 1 peer(s)
+[  13.5s][bob   ] 2026-06-22 19:45:42,896 [Router] PUB de alice@RCteste (#RCteste): broadcast para o namespace RCteste
+[  13.5s][bob   ] 
+[  13.5s][bob   ] [PUB] alice@RCteste: broadcast para o namespace RCteste
+[  14.5s][DRIVE ] alice <- /pub * broadcast global para todos os conectados
+[  14.5s][alice ] > 2026-06-22 19:45:43,897 [Router] PUB * para 1 peer(s)
+[  14.5s][alice ] PUB enviado a 1 peer(s)
+[  14.5s][bob   ] > 2026-06-22 19:45:43,897 [Router] PUB de alice@RCteste (*): broadcast global para todos os conectados
+[  14.5s][bob   ] 
+[  14.5s][bob   ] [PUB] alice@RCteste: broadcast global para todos os conectados
+[  15.6s][alice ] > 2026-06-22 19:45:44,962 [KeepAlive] Sent 1 PINGs | Average RTT = 0.9 ms
+[  15.6s][bob   ] > 2026-06-22 19:45:44,962 [KeepAlive] Sent 1 PINGs | Average RTT = 0.5 ms
+[  15.6s][rendez] 2026-06-22 19:45:44,966 [rendez] DISCOVER ns=RCteste -> 2 peer(s)
+[  15.6s][rendez] 2026-06-22 19:45:44,966 [rendez] DISCOVER ns=RCteste -> 2 peer(s)
+[  15.6s][alice ] 2026-06-22 19:45:44,966 [Rendezvous] DISCOVER ok: 2 peer(s)
+[  15.6s][bob   ] 2026-06-22 19:45:44,967 [Rendezvous] DISCOVER ok: 2 peer(s)
+
+======================================================================
+[  16.5s]  CENÁRIO 3: PING/PONG e RTT (ping_interval=3s)
+======================================================================
+[  16.5s][DRIVE ] alice <- /log DEBUG
+[  16.5s][alice ] nível de console -> DEBUG
+[  18.6s][bob   ] 2026-06-22 19:45:47,963 [KeepAlive] Sent 1 PINGs | Average RTT = 0.5 ms
+[  18.6s][alice ] > 2026-06-22 19:45:47,963 [KeepAlive] Sent 1 PINGs | Average RTT = 0.9 ms
+[  18.6s][alice ] 2026-06-22 19:45:47,964 [KeepAlive] PONG de bob@RCteste: RTT = 0.7 ms
+[  20.6s][rendez] 2026-06-22 19:45:49,969 [rendez] DISCOVER ns=RCteste -> 2 peer(s)
+[  20.6s][rendez] 2026-06-22 19:45:49,970 [rendez] DISCOVER ns=RCteste -> 2 peer(s)
+[  20.6s][bob   ] 2026-06-22 19:45:49,970 [Rendezvous] DISCOVER ok: 2 peer(s)
+[  20.6s][alice ] 2026-06-22 19:45:49,970 [Rendezvous] DISCOVER ok: 2 peer(s)
+[  21.6s][alice ] 2026-06-22 19:45:50,965 [KeepAlive] Sent 1 PINGs | Average RTT = 0.9 ms
+[  21.6s][bob   ] 2026-06-22 19:45:50,965 [KeepAlive] Sent 1 PINGs | Average RTT = 0.5 ms
+[  21.6s][alice ] 2026-06-22 19:45:50,966 [KeepAlive] PONG de bob@RCteste: RTT = 0.8 ms
+[  23.5s][DRIVE ] alice <- /rtt
+[  23.5s][alice ] RTT por peer:
+[  23.5s][alice ]   bob@RCteste              0.8 ms
+[  23.5s][alice ]   média geral: 0.8 ms
+[  24.5s][DRIVE ] alice <- /log INFO
+[  24.5s][alice ] > nível de console -> INFO
+[  24.6s][alice ] > 2026-06-22 19:45:53,966 [KeepAlive] Sent 1 PINGs | Average RTT = 0.8 ms
+[  24.6s][bob   ] 2026-06-22 19:45:53,966 [KeepAlive] Sent 1 PINGs | Average RTT = 0.6 ms
+
+======================================================================
+[  25.5s]  CENÁRIO 4: bob CAI e o cliente RECONECTA automaticamente (backoff)
+======================================================================
+[  25.5s][DRIVE ] matando o processo do bob (kill -9)
+[  25.5s][alice ] 2026-06-22 19:45:54,906 [PeerServer] Conexão com bob@RCteste encerrada
+[  25.5s][alice ] 2026-06-22 19:45:54,910 [PeerTable] Peer bob@RCteste STALE (tentativa 1/5, retry em 1s)
+[  25.6s][rendez] 2026-06-22 19:45:54,973 [rendez] DISCOVER ns=RCteste -> 2 peer(s)
+[  25.6s][alice ] 2026-06-22 19:45:54,974 [Rendezvous] DISCOVER ok: 2 peer(s)
+[  26.5s][alice ] 2026-06-22 19:45:55,912 [PeerTable] Peer bob@RCteste STALE (tentativa 2/5, retry em 2s)
+[  28.5s][alice ] 2026-06-22 19:45:57,915 [PeerTable] Peer bob@RCteste STALE (tentativa 3/5, retry em 4s)
+[  30.6s][rendez] 2026-06-22 19:45:59,976 [rendez] DISCOVER ns=RCteste -> 2 peer(s)
+[  30.6s][alice ] 2026-06-22 19:45:59,976 [Rendezvous] DISCOVER ok: 2 peer(s)
+[  32.5s][DRIVE ] reerguendo o bob
+[  32.5s][alice ] 2026-06-22 19:46:01,922 [PeerTable] Peer bob@RCteste STALE (tentativa 4/5, retry em 8s)
+[  32.6s][bob   ] 2026-06-22 19:46:01,983 [main] Cliente iniciado: bob@RCteste (escuta na porta 4001)
+[  32.6s][bob   ] 2026-06-22 19:46:01,987 [PeerServer] Escutando em 0.0.0.0:4001
+[  32.6s][bob   ] 2026-06-22 19:46:01,987 [P2PClient] Cliente bob@RCteste no ar (escuta 4001).
+[  32.6s][bob   ] CLI pronta. /help para ver os comandos.
+[  32.6s][rendez] 2026-06-22 19:46:01,989 [rendez] REGISTER bob@RCteste -> 127.0.0.1:4001 (ttl=3600)
+[  32.6s][rendez] 2026-06-22 19:46:01,989 [rendez] DISCOVER ns=RCteste -> 2 peer(s)
+[  32.6s][bob   ] > 2026-06-22 19:46:01,989 [Rendezvous] REGISTER ok: bob@RCteste ttl=3600 ip=127.0.0.1
+[  32.6s][bob   ] 2026-06-22 19:46:01,989 [Rendezvous] DISCOVER ok: 2 peer(s)
+[  32.6s][bob   ] 2026-06-22 19:46:01,990 [PeerTable] Novo peer descoberto: alice@RCteste
+[  35.6s][rendez] 2026-06-22 19:46:04,978 [rendez] DISCOVER ns=RCteste -> 2 peer(s)
+[  35.6s][alice ] 2026-06-22 19:46:04,979 [Rendezvous] DISCOVER ok: 2 peer(s)
+[  37.6s][rendez] 2026-06-22 19:46:06,992 [rendez] DISCOVER ns=RCteste -> 2 peer(s)
+[  37.6s][bob   ] 2026-06-22 19:46:06,993 [Rendezvous] DISCOVER ok: 2 peer(s)
+[  40.6s][bob   ] 2026-06-22 19:46:09,934 [PeerServer] Inbound connected: alice@RCteste
+[  40.6s][alice ] 2026-06-22 19:46:09,934 [PeerServer] Outbound connected: bob@RCteste
+[  40.6s][rendez] 2026-06-22 19:46:09,982 [rendez] DISCOVER ns=RCteste -> 2 peer(s)
+[  40.6s][alice ] 2026-06-22 19:46:09,983 [Rendezvous] DISCOVER ok: 2 peer(s)
+[  41.5s][DRIVE ] alice <- /conn
+[  41.5s][alice ] Conexões ativas:
+[  41.5s][alice ]   bob@RCteste              outbound  CONNECTED
+[  42.6s][rendez] 2026-06-22 19:46:11,995 [rendez] DISCOVER ns=RCteste -> 2 peer(s)
+[  42.6s][bob   ] 2026-06-22 19:46:11,996 [Rendezvous] DISCOVER ok: 2 peer(s)
+
+======================================================================
+[  43.5s]  CENÁRIO 5: encerramento com BYE/BYE_OK (alice /quit com bob vivo)
+======================================================================
+[  43.5s][DRIVE ] alice <- /quit
+[  43.5s][alice ] > 2026-06-22 19:46:12,912 [P2PClient] Encerrando alice@RCteste...
+[  43.5s][bob   ] 2026-06-22 19:46:12,913 [Router] BYE de alice@RCteste (motivo=quit)
+[  43.5s][alice ] 2026-06-22 19:46:12,914 [Router] BYE_OK de bob@RCteste; sessão encerrada
+[  43.5s][bob   ] 2026-06-22 19:46:12,914 [PeerServer] Conexão com alice@RCteste encerrada
+[  43.5s][alice ] 2026-06-22 19:46:12,914 [PeerServer] Conexão com bob@RCteste encerrada
+[  43.5s][rendez] 2026-06-22 19:46:12,915 [rendez] UNREGISTER alice@RCteste
+[  43.5s][alice ] 2026-06-22 19:46:12,915 [Rendezvous] UNREGISTER ok: alice@RCteste
+[  43.5s][alice ] 2026-06-22 19:46:12,915 [P2PClient] Cliente encerrado.
+
+======================================================================
+[  47.5s]  CENÁRIO 6: comandos da CLI já exercitados; encerrando o bob
+======================================================================
+[  47.5s][DRIVE ] bob <- /quit
+[  47.5s][bob   ] 2026-06-22 19:46:16,913 [P2PClient] Encerrando bob@RCteste...
+[  47.5s][rendez] 2026-06-22 19:46:16,915 [rendez] UNREGISTER bob@RCteste
+[  47.5s][bob   ] 2026-06-22 19:46:16,915 [Rendezvous] UNREGISTER ok: bob@RCteste
+[  47.5s][bob   ] 2026-06-22 19:46:16,916 [P2PClient] Cliente encerrado.
+
+[  50.5s] alice exit=0 | bob exit=0
