@@ -34,8 +34,8 @@ Quadro de tarefas do projeto. Como usar:
 - [x] **F6.2** (Luiz) Loops automáticos no `p2p_client.py`: DISCOVER recorrente (respeitando rate limit de 50 req/min do servidor), renovação do REGISTER antes do TTL expirar, reconciliação da PeerTable e tentativa de conexão a peers novos. Diferenciar peers já conhecidos dos novos (diff com a `PeerTable`) e marcar `STALE` os que sumiram da lista.
 
 ## Fase 7 — CLI
-- [ ] **F7.1** `cli.py`: leitura assíncrona do stdin e parser de comandos.
-- [ ] **F7.2** Comandos: `/peers`, `/msg`, `/pub`, `/conn`, `/rtt`, `/reconnect`, `/log`, `/quit`.
+- [x] **F7.1** (Luiz) `cli.py`: leitura assíncrona do stdin e parser de comandos.
+- [x] **F7.2** (Luiz) Comandos: `/peers`, `/msg`, `/pub`, `/conn`, `/rtt`, `/reconnect`, `/log`, `/quit`. *(inclui `/help`; visões de exibição em `state.py`)*
 
 ## Fase 8 — Encerramento limpo
 - [ ] **F8.1** BYE/BYE_OK em todas as conexões ativas no `/quit`, seguido de UNREGISTER no rendezvous e cancelamento das tasks assíncronas sem traceback. Ao **receber** BYE: responder BYE_OK, marcar a conexão como `CLOSED` e fechar o socket.
