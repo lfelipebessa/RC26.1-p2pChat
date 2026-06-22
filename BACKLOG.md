@@ -41,9 +41,9 @@ Quadro de tarefas do projeto. Como usar:
 - [x] **F8.1** (Luiz) BYE/BYE_OK em todas as conexões ativas no `/quit`, seguido de UNREGISTER no rendezvous e cancelamento das tasks assíncronas sem traceback. Ao **receber** BYE: responder BYE_OK, marcar a conexão como `CLOSED` e fechar o socket.
 
 ## Fase 9 — Testes e entrega
-- [ ] **F9.1** Executar os 6 cenários mínimos da especificação e registrar evidências (prints/logs).
-- [ ] **F9.2** README com instruções de execução, arquitetura e decisões de projeto.
-- [ ] **F9.3** Entrega administrativa: cabeçalho de identificação em cada arquivo `.py` (número do grupo, nomes completos e matrículas) e preencher o número do grupo (lista oficial da UnB) no formulário/relatório de avaliação.
+- [x] **F9.1** (Luiz) Executar os 6 cenários mínimos da especificação e registrar evidências (prints/logs). *(evidências em `docs/evidencias/cenarios.txt`; conexão peer-a-peer testada na mesma máquina via rendezvous local `tests/local_rendezvous.py`, pois o servidor público devolve o IP público — irroteável localmente por falta de NAT hairpinning; REGISTER/DISCOVER/UNREGISTER e backoff também validados contra o servidor público real)*
+- [x] **F9.2** (Luiz) README com instruções de execução, arquitetura e decisões de projeto. *(`README.md` + `conftest.py` para rodar os testes com `pytest` sem `PYTHONPATH=src`; de passagem, ligado o `ack_timeout` do config ao `MessageRouter`)*
+- [x] **F9.3** (Luiz) Entrega administrativa: cabeçalho de identificação em cada arquivo `.py` (Grupo 7; Luiz Bessa — 231011687; Luciano Ferreira — 221033143) aplicado nos 24 `.py` (`src/`, `tests/`, `conftest.py`). *(Falta apenas, fora do repositório, preencher "Grupo 7" no relatório/formulário oficial da UnB — passo manual no `.docx`.)*
 
 ---
 
