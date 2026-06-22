@@ -30,8 +30,8 @@ Quadro de tarefas do projeto. Como usar:
 - [x] **F5.2** (Luiz) RTT médio por peer acumulado + log periódico (ex.: `[KeepAlive] Sent 2 PINGs | Average RTT = 43.2 ms`).
 
 ## Fase 6 — PeerTable e reconexão
-- [ ] **F6.1** `peer_table.py`: estados (`DISCOVERED`, `CONNECTING`, `CONNECTED`, `STALE`, `CLOSED`), backoff exponencial e limite `max_reconnect_attempts` do config.
-- [ ] **F6.2** Loops automáticos no `p2p_client.py`: DISCOVER recorrente (respeitando rate limit de 50 req/min do servidor), renovação do REGISTER antes do TTL expirar, reconciliação da PeerTable e tentativa de conexão a peers novos. Diferenciar peers já conhecidos dos novos (diff com a `PeerTable`) e marcar `STALE` os que sumiram da lista.
+- [x] **F6.1** (Luiz) `peer_table.py`: estados (`DISCOVERED`, `CONNECTING`, `CONNECTED`, `STALE`, `CLOSED`), backoff exponencial e limite `max_reconnect_attempts` do config.
+- [x] **F6.2** (Luiz) Loops automáticos no `p2p_client.py`: DISCOVER recorrente (respeitando rate limit de 50 req/min do servidor), renovação do REGISTER antes do TTL expirar, reconciliação da PeerTable e tentativa de conexão a peers novos. Diferenciar peers já conhecidos dos novos (diff com a `PeerTable`) e marcar `STALE` os que sumiram da lista.
 
 ## Fase 7 — CLI
 - [ ] **F7.1** `cli.py`: leitura assíncrona do stdin e parser de comandos.
