@@ -110,5 +110,40 @@ class TestMessaging(unittest.IsolatedAsyncioTestCase):
             await server.stop()
 
 
+class TestBye(unittest.IsolatedAsyncioTestCase):
+    async def test_bye_recebe_bye_ok_e_fecha(self):
+        closed = []
+        bob_s, bob_r, _ = await make_peer("bob@CIC")
+        bob_r.on_close = lambda pid: closed.append(pid)
+        alice_s, alice_r, _ = await make_peer("alice@CIC")
+        try:
+            await alice_s.connect_to("127.0.0.1", port_of(bob_s), "bob@CIC")
+            await asyncio.sleep(0.05)
+            conn = alice_s.connections["bob@CIC"]
+            ok = await alice_r.send_bye(conn)
+            self.assertTrue(ok)                      # BYE_OK recebido
+            await asyncio.sleep(0.05)
+            self.assertEqual(closed, ["alice@CIC"])  # bob marcou a sessão com alice como fechada
+        finally:
+            await alice_s.stop()
+            await bob_s.stop()
+
+    async def test_send_bye_sem_resposta_da_false(self):
+        bob_s = PeerServer("bob@CIC", "127.0.0.1", 0)
+        async def ignora(conn, msg): return None
+        bob_s.message_handler = ignora
+        await bob_s.start()
+        alice_s, alice_r, _ = await make_peer("alice@CIC")
+        try:
+            await alice_s.connect_to("127.0.0.1", port_of(bob_s), "bob@CIC")
+            await asyncio.sleep(0.05)
+            conn = alice_s.connections["bob@CIC"]
+            ok = await alice_r.send_bye(conn, timeout=0.2)
+            self.assertFalse(ok)
+        finally:
+            await alice_s.stop()
+            await bob_s.stop()
+
+
 if __name__ == "__main__":
     unittest.main()

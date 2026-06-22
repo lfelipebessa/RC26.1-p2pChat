@@ -1,6 +1,7 @@
 """Roteamento de mensagens entre peers: SEND/ACK (entrega confiável na camada
 de aplicação, com timeout de 5s) e PUB (difusão para um namespace ou para
-todos). Deduplica mensagens repetidas por msg_id.
+todos). Trata também o encerramento de sessão BYE/BYE_OK. Deduplica mensagens
+repetidas por msg_id.
 """
 import asyncio
 import logging
@@ -13,13 +14,15 @@ ACK_TIMEOUT = 5.0
 
 
 class MessageRouter:
-    def __init__(self, my_peer_id, server, on_chat=None):
+    def __init__(self, my_peer_id, server, on_chat=None, on_close=None):
         self.my_peer_id = my_peer_id
         self.server = server                 # PeerServer (acessa connections no PUB)
         self.on_chat = on_chat               # callback(src, payload, kind) p/ a CLI
+        self.on_close = on_close             # callback(peer_id) ao receber BYE (Fase 8)
         self._seen = set()                   # dedup de msg_id
         self._seen_order = deque()
         self._pending_acks = {}              # msg_id -> Future
+        self._pending_byes = {}              # msg_id -> Future (espera de BYE_OK)
         self.logger = logging.getLogger("Router")
 
     def _new_id(self):
@@ -40,6 +43,9 @@ class MessageRouter:
         if mtype == "ACK":
             self._on_ack(msg)
             return
+        if mtype == "BYE_OK":
+            self._on_bye_ok(msg)
+            return
         msg_id = msg.get("msg_id")
         if msg_id is not None:
             if msg_id in self._seen:
@@ -50,6 +56,8 @@ class MessageRouter:
             await self._on_send(conn, msg)
         elif mtype == "PUB":
             self._on_pub(msg)
+        elif mtype == "BYE":
+            await self._on_bye(conn, msg)
 
     async def _on_send(self, conn, msg):
         src = msg.get("src")
@@ -71,6 +79,24 @@ class MessageRouter:
 
     def _on_ack(self, msg):
         fut = self._pending_acks.get(msg.get("msg_id"))
+        if fut and not fut.done():
+            fut.set_result(True)
+
+    async def _on_bye(self, conn, msg):
+        """Recebeu BYE: responde BYE_OK, marca a conexão CLOSED, avisa o cliente e fecha."""
+        self.logger.info("BYE de %s (motivo=%s)", msg.get("src"), msg.get("reason"))
+        try:
+            await conn.send({"type": "BYE_OK", "msg_id": msg.get("msg_id"),
+                             "timestamp": self._now(), "ttl": 1})
+        except OSError:
+            pass
+        conn.state = "CLOSED"
+        if self.on_close and conn.peer_id:
+            self.on_close(conn.peer_id)
+        await conn.close()
+
+    def _on_bye_ok(self, msg):
+        fut = self._pending_byes.get(msg.get("msg_id"))
         if fut and not fut.done():
             fut.set_result(True)
 
@@ -96,6 +122,22 @@ class MessageRouter:
             return False
         finally:
             self._pending_acks.pop(msg_id, None)
+
+    async def send_bye(self, conn, reason="quit", timeout=2.0):
+        """Envia BYE e espera o BYE_OK por `timeout` segundos. Retorna True se
+        confirmado, False se deu timeout ou a conexão quebrou."""
+        msg_id = self._new_id()
+        fut = asyncio.get_running_loop().create_future()
+        self._pending_byes[msg_id] = fut
+        try:
+            await conn.send({"type": "BYE", "msg_id": msg_id, "src": self.my_peer_id,
+                             "dst": conn.peer_id, "reason": reason, "ttl": 1})
+            await asyncio.wait_for(fut, timeout)
+            return True
+        except (asyncio.TimeoutError, OSError):
+            return False
+        finally:
+            self._pending_byes.pop(msg_id, None)
 
     async def publish(self, scope, payload):
         """Envia PUB para o escopo: '*' (todos) ou '#namespace'. Retorna nº de envios."""
