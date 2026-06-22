@@ -38,7 +38,7 @@ Quadro de tarefas do projeto. Como usar:
 - [x] **F7.2** (Luiz) Comandos: `/peers`, `/msg`, `/pub`, `/conn`, `/rtt`, `/reconnect`, `/log`, `/quit`. *(inclui `/help`; visões de exibição em `state.py`)*
 
 ## Fase 8 — Encerramento limpo
-- [ ] **F8.1** BYE/BYE_OK em todas as conexões ativas no `/quit`, seguido de UNREGISTER no rendezvous e cancelamento das tasks assíncronas sem traceback. Ao **receber** BYE: responder BYE_OK, marcar a conexão como `CLOSED` e fechar o socket.
+- [x] **F8.1** (Luiz) BYE/BYE_OK em todas as conexões ativas no `/quit`, seguido de UNREGISTER no rendezvous e cancelamento das tasks assíncronas sem traceback. Ao **receber** BYE: responder BYE_OK, marcar a conexão como `CLOSED` e fechar o socket.
 
 ## Fase 9 — Testes e entrega
 - [ ] **F9.1** Executar os 6 cenários mínimos da especificação e registrar evidências (prints/logs).
