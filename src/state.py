@@ -1,3 +1,10 @@
+# =============================================================================
+# Trabalho Final de Redes de Computadores — Chat P2P
+# Grupo 7
+#   - Luiz Bessa — matrícula 231011687
+#   - Luciano Ferreira — matrícula 221033143
+# =============================================================================
+
 """AppState (Fase 7): visão de leitura para a CLI. Guarda a identidade do peer
 e formata as consultas (/conn, /rtt, /peers) lendo os componentes vivos
 (PeerServer, KeepAlive, PeerTable) — sem duplicar estado (decisão A1).

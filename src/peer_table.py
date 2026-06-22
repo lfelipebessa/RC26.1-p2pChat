@@ -1,3 +1,10 @@
+# =============================================================================
+# Trabalho Final de Redes de Computadores — Chat P2P
+# Grupo 7
+#   - Luiz Bessa — matrícula 231011687
+#   - Luciano Ferreira — matrícula 221033143
+# =============================================================================
+
 """PeerTable (Fase 6): registro de peers conhecidos + política de reconexão.
 
 CAMADA DE POLÍTICA: guarda estado/backoff/endereço de cada peer, mas NÃO segura

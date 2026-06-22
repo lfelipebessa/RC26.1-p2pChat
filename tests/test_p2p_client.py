@@ -1,3 +1,10 @@
+# =============================================================================
+# Trabalho Final de Redes de Computadores — Chat P2P
+# Grupo 7
+#   - Luiz Bessa — matrícula 231011687
+#   - Luciano Ferreira — matrícula 221033143
+# =============================================================================
+
 import unittest
 from peer_table import CONNECTED, STALE, DISCOVERED
 

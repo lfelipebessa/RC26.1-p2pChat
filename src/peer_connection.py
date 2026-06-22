@@ -1,3 +1,10 @@
+# =============================================================================
+# Trabalho Final de Redes de Computadores — Chat P2P
+# Grupo 7
+#   - Luiz Bessa — matrícula 231011687
+#   - Luciano Ferreira — matrícula 221033143
+# =============================================================================
+
 """Conexões diretas entre peers: servidor de escuta (inbound), conexões
 outbound, handshake HELLO/HELLO_OK e registro de conexões (sem duplicar).
 

@@ -1,3 +1,10 @@
+# =============================================================================
+# Trabalho Final de Redes de Computadores — Chat P2P
+# Grupo 7
+#   - Luiz Bessa — matrícula 231011687
+#   - Luciano Ferreira — matrícula 221033143
+# =============================================================================
+
 """Comunicação com o servidor Rendezvous (registro e descoberta de peers).
 
 Cada operação é uma conexão TCP CURTA: abre -> envia 1 requisição -> lê 1

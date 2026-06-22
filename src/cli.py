@@ -1,3 +1,10 @@
+# =============================================================================
+# Trabalho Final de Redes de Computadores — Chat P2P
+# Grupo 7
+#   - Luiz Bessa — matrícula 231011687
+#   - Luciano Ferreira — matrícula 221033143
+# =============================================================================
+
 """CLI (Fase 7): leitura assíncrona de stdin e despacho de comandos.
 
 Lê linhas via run_in_executor (input() bloqueante numa thread do executor),

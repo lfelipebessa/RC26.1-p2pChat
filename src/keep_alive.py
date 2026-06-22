@@ -1,3 +1,10 @@
+# =============================================================================
+# Trabalho Final de Redes de Computadores — Chat P2P
+# Grupo 7
+#   - Luiz Bessa — matrícula 231011687
+#   - Luciano Ferreira — matrícula 221033143
+# =============================================================================
+
 """Keep-alive entre peers: PING/PONG periódico para detectar conexões mortas
 e medir o RTT (tempo de ida e volta) por peer.
 
