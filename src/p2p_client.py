@@ -64,3 +64,77 @@ class P2PClient:
             self.table.mark(info.peer_id, DISCOVERED)
         else:
             self.table.mark_connected(info.peer_id)
+
+    async def _discovery_once(self):
+        try:
+            peers = await self.rendezvous.discover(self.config.namespace)
+        except RendezvousError as e:
+            self.logger.warning("DISCOVER falhou: %s", e)
+            return
+        present = set()
+        for p in peers:
+            pid = f"{p['name']}@{p['namespace']}"
+            if pid == self.my_peer_id:
+                continue                                  # não conecta em si mesmo
+            self.table.upsert_from_discover(p)
+            present.add(pid)
+        connected = set(self.server.connections)
+        for info in list(self.table.peers.values()):      # sumiu e não conectado -> STALE
+            if (info.peer_id not in present and info.peer_id not in connected
+                    and info.state not in (STALE, CLOSED)):
+                self.table.mark(info.peer_id, STALE)
+        await self.reconcile()
+
+    async def _register_loop(self):
+        try:
+            while True:
+                try:
+                    resp = await self.rendezvous.register(
+                        self.config.namespace, self.config.name,
+                        self.config.listen_port, self.config.register_ttl)
+                    self.state.public_ip = resp.get("ip")
+                except RendezvousError as e:
+                    self.logger.warning("REGISTER falhou: %s", e)
+                await asyncio.sleep(max(1, self.config.register_ttl // 2))
+        except asyncio.CancelledError:
+            raise
+
+    async def _discovery_loop(self):
+        try:
+            while True:
+                await self._discovery_once()
+                await asyncio.sleep(self.config.discover_interval)
+        except asyncio.CancelledError:
+            raise
+
+    async def _maintenance_loop(self):
+        try:
+            while True:
+                try:
+                    await asyncio.wait_for(self._wake_reconcile.wait(), timeout=1.0)
+                except asyncio.TimeoutError:
+                    pass
+                self._wake_reconcile.clear()
+                await self.reconcile()
+        except asyncio.CancelledError:
+            raise
+
+    def wake_reconcile(self):
+        if self._wake_reconcile:
+            self._wake_reconcile.set()
+
+    async def run(self):
+        self._stop = asyncio.Event()
+        self._wake_reconcile = asyncio.Event()
+        self._reconcile_lock = asyncio.Lock()
+        await self.server.start()
+        self.keep_alive.start()
+        self._tasks = [
+            asyncio.create_task(self._register_loop()),
+            asyncio.create_task(self._discovery_loop()),
+            asyncio.create_task(self._maintenance_loop()),
+            asyncio.create_task(self.cli.run()),
+        ]
+        self.logger.info("Cliente %s no ar (escuta %s).", self.my_peer_id, self.config.listen_port)
+        await self._stop.wait()
+        await self._shutdown()           # implementado numa fase futura

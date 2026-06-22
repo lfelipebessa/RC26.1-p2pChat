@@ -32,6 +32,7 @@ def make_client(my_peer_id="alice@CIC"):
     c.router.server = c.server
     import asyncio
     c._reconcile_lock = asyncio.Lock()           # criado no run() real; aqui injetamos
+    c._wake_reconcile = asyncio.Event()
     return c
 
 class TestReconcile(unittest.IsolatedAsyncioTestCase):
@@ -64,6 +65,31 @@ class TestReconcile(unittest.IsolatedAsyncioTestCase):
         c.table.upsert_from_discover({"name":"bob","namespace":"CIC","ip":"127.0.0.1","port":4001})
         await c.reconcile()
         self.assertNotIn("bob@CIC", c.server.dialed)
+
+class FakeRendezvous:
+    def __init__(self, peers): self._peers = peers
+    async def discover(self, namespace=None): return self._peers
+
+class TestDiscoveryOnce(unittest.IsolatedAsyncioTestCase):
+    async def test_discovery_upsert_filtra_self_e_disca(self):
+        c = make_client()
+        c.rendezvous = FakeRendezvous([
+            {"name":"alice","namespace":"CIC","ip":"127.0.0.1","port":4000},  # eu mesmo: filtrar
+            {"name":"bob","namespace":"CIC","ip":"127.0.0.1","port":4001},
+        ])
+        await c._discovery_once()
+        self.assertNotIn("alice@CIC", c.table.peers)     # não me incluo
+        self.assertIn("bob@CIC", c.table.peers)
+        self.assertIn("bob@CIC", c.server.dialed)        # reconcile disparado
+
+    async def test_peer_que_sumiu_vira_stale(self):
+        c = make_client(); c.server.dial_result = "fail"     # sumido = inalcançável
+        c.table.upsert_from_discover({"name":"bob","namespace":"CIC","ip":"127.0.0.1","port":4001})
+        c.rendezvous = FakeRendezvous([])                # bob sumiu do DISCOVER
+        await c._discovery_once()
+        # marcado STALE; o reconcile tenta religar, a rediscagem falha -> segue STALE (em backoff)
+        self.assertEqual(c.table.peers["bob@CIC"].state, STALE)
+        self.assertEqual(c.table.peers["bob@CIC"].attempts, 1)
 
 if __name__ == "__main__":
     unittest.main()
