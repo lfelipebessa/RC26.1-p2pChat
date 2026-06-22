@@ -1,3 +1,10 @@
+# =============================================================================
+# Trabalho Final de Redes de Computadores — Chat P2P
+# Grupo 7
+#   - Luiz Bessa — matrícula 231011687
+#   - Luciano Ferreira — matrícula 221033143
+# =============================================================================
+
 """Roteamento de mensagens entre peers: SEND/ACK (entrega confiável na camada
 de aplicação, com timeout de 5s) e PUB (difusão para um namespace ou para
 todos). Trata também o encerramento de sessão BYE/BYE_OK. Deduplica mensagens
@@ -14,11 +21,13 @@ ACK_TIMEOUT = 5.0
 
 
 class MessageRouter:
-    def __init__(self, my_peer_id, server, on_chat=None, on_close=None):
+    def __init__(self, my_peer_id, server, on_chat=None, on_close=None,
+                 ack_timeout=ACK_TIMEOUT):
         self.my_peer_id = my_peer_id
         self.server = server                 # PeerServer (acessa connections no PUB)
         self.on_chat = on_chat               # callback(src, payload, kind) p/ a CLI
         self.on_close = on_close             # callback(peer_id) ao receber BYE (Fase 8)
+        self.ack_timeout = ack_timeout       # s p/ esperar ACK (vem do config.ack_timeout)
         self._seen = set()                   # dedup de msg_id
         self._seen_order = deque()
         self._pending_acks = {}              # msg_id -> Future
@@ -44,7 +53,7 @@ class MessageRouter:
             self._on_ack(msg)
             return
         if mtype == "BYE_OK":
-            self._on_bye_ok(msg)
+            self._on_bye_ok(conn, msg)
             return
         msg_id = msg.get("msg_id")
         if msg_id is not None:
@@ -95,16 +104,19 @@ class MessageRouter:
             self.on_close(conn.peer_id)
         await conn.close()
 
-    def _on_bye_ok(self, msg):
+    def _on_bye_ok(self, conn, msg):
+        self.logger.info("BYE_OK de %s; sessão encerrada", conn.peer_id)
         fut = self._pending_byes.get(msg.get("msg_id"))
         if fut and not fut.done():
             fut.set_result(True)
 
-    async def send(self, dst, payload, timeout=ACK_TIMEOUT):
-        """Envia SEND (unicast) e espera ACK por `timeout` segundos.
-        Retorna True se o ACK chegou, False se não há conexão ou deu timeout.
-        Pode levantar OSError se a conexão quebrar no meio do envio (a Fase 6
-        trata marcando o peer como STALE)."""
+    async def send(self, dst, payload, timeout=None):
+        """Envia SEND (unicast) e espera ACK por `timeout` segundos (default:
+        self.ack_timeout, vindo do config). Retorna True se o ACK chegou, False
+        se não há conexão ou deu timeout. Pode levantar OSError se a conexão
+        quebrar no meio do envio (a Fase 6 trata marcando o peer como STALE)."""
+        if timeout is None:
+            timeout = self.ack_timeout
         conn = self.server.connections.get(dst)
         if conn is None:
             self.logger.warning("Sem conexão ativa com %s", dst)

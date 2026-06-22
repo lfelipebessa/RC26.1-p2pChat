@@ -1,3 +1,10 @@
+# =============================================================================
+# Trabalho Final de Redes de Computadores — Chat P2P
+# Grupo 7
+#   - Luiz Bessa — matrícula 231011687
+#   - Luciano Ferreira — matrícula 221033143
+# =============================================================================
+
 """P2PClient (Fase 6): orquestrador. Instancia os módulos, cola a cadeia de
 handlers e roda as tarefas concorrentes (registro, discovery, manutenção,
 keep-alive, CLI). reconcile() sincroniza a PeerTable com o servidor e disca
@@ -23,7 +30,8 @@ class P2PClient:
         self.rendezvous = RendezvousConnection(config.rendezvous_host, config.rendezvous_port)
         self.server = PeerServer(self.my_peer_id, "0.0.0.0", config.listen_port)
         self.router = MessageRouter(self.my_peer_id, self.server,
-                                    on_chat=self._on_chat, on_close=self._on_peer_closed)
+                                    on_chat=self._on_chat, on_close=self._on_peer_closed,
+                                    ack_timeout=config.ack_timeout)
         self.keep_alive = KeepAlive(self.my_peer_id, self.server,
                                     interval=config.ping_interval,
                                     next_handler=self.router.handle)
