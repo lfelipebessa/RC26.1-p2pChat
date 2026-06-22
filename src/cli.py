@@ -58,3 +58,18 @@ class CLI:
                 print("uso: /pub <escopo> <mensagem>"); return
             await self.client.cmd_pub(escopo, texto.strip()); return
         print(f"comando desconhecido: /{cmd} (use /help)")
+
+    async def run(self):
+        import asyncio
+        loop = asyncio.get_running_loop()
+        print("CLI pronta. /help para ver os comandos.")
+        while not self.client.is_stopping():
+            try:
+                line = await loop.run_in_executor(None, input, "> ")
+            except (EOFError, asyncio.CancelledError):
+                self.client.request_stop()
+                break
+            try:
+                await self.dispatch(line)
+            except Exception:
+                self.logger.exception("erro ao processar comando")
