@@ -22,7 +22,8 @@ class P2PClient:
         self.logger = logging.getLogger("P2PClient")
         self.rendezvous = RendezvousConnection(config.rendezvous_host, config.rendezvous_port)
         self.server = PeerServer(self.my_peer_id, "0.0.0.0", config.listen_port)
-        self.router = MessageRouter(self.my_peer_id, self.server, on_chat=self._on_chat)
+        self.router = MessageRouter(self.my_peer_id, self.server,
+                                    on_chat=self._on_chat, on_close=self._on_peer_closed)
         self.keep_alive = KeepAlive(self.my_peer_id, self.server,
                                     interval=config.ping_interval,
                                     next_handler=self.router.handle)
@@ -39,6 +40,27 @@ class P2PClient:
     def _on_chat(self, src, payload, kind):
         prefixo = "[PUB]" if kind == "pub" else "[MSG]"
         print(f"\n{prefixo} {src}: {payload}\n> ", end="", flush=True)
+
+    def _on_peer_closed(self, peer_id):
+        self.table.mark(peer_id, CLOSED)
+        self.keep_alive.clear_peer(peer_id)
+
+    async def _shutdown(self):
+        self.logger.info("Encerrando %s...", self.my_peer_id)
+        for t in self._tasks:
+            t.cancel()
+        await asyncio.gather(*self._tasks, return_exceptions=True)
+        conns = list(self.server.connections.values())
+        await asyncio.gather(*(self.router.send_bye(c) for c in conns),
+                             return_exceptions=True)
+        try:
+            await self.rendezvous.unregister(self.config.namespace, self.config.name,
+                                             self.config.listen_port)
+        except RendezvousError as e:
+            self.logger.warning("UNREGISTER falhou: %s", e)
+        await self.keep_alive.stop()
+        await self.server.stop()
+        self.logger.info("Cliente encerrado.")
 
     async def reconcile(self):
         async with self._reconcile_lock:

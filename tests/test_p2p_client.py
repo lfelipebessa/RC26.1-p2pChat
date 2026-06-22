@@ -91,5 +91,28 @@ class TestDiscoveryOnce(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(c.table.peers["bob@CIC"].state, STALE)
         self.assertEqual(c.table.peers["bob@CIC"].attempts, 1)
 
+class TestShutdown(unittest.IsolatedAsyncioTestCase):
+    async def test_shutdown_cancela_tasks_bye_e_unregister(self):
+        import asyncio
+        c = make_client()
+        c._stop = asyncio.Event()
+        async def dorme(): await asyncio.sleep(3600)
+        c._tasks = [asyncio.create_task(dorme()) for _ in range(2)]
+        c.server.connections = {"bob@CIC": FakeConn("bob@CIC")}
+        byes = []
+        async def fake_send_bye(conn, *a, **k):
+            byes.append(conn.peer_id); return True
+        c.router.send_bye = fake_send_bye
+        unreg = []
+        async def fake_unreg(ns, name, port):
+            unreg.append((ns, name, port)); return {"status": "OK"}
+        c.rendezvous.unregister = fake_unreg
+        async def fake_server_stop(): pass
+        c.server.stop = fake_server_stop
+        await c._shutdown()
+        self.assertEqual(byes, ["bob@CIC"])
+        self.assertEqual(len(unreg), 1)
+        self.assertTrue(all(t.cancelled() for t in c._tasks))
+
 if __name__ == "__main__":
     unittest.main()
