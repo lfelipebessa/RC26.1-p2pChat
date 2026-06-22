@@ -1,4 +1,36 @@
-# src/cli.py  (stub — corpo real na Fase 7)
+"""CLI (Fase 7): leitura assíncrona de stdin e despacho de comandos.
+
+Lê linhas via run_in_executor (input() bloqueante numa thread do executor),
+parseia e despacha para métodos do P2PClient. Esta parte cobre o parser e o
+texto do /help; o despacho e o loop de leitura entram nas tasks seguintes.
+"""
+import logging
+
+
 class CLI:
+    HELP = (
+        "Comandos:\n"
+        "  /help                      mostra esta ajuda\n"
+        "  /peers [* | #ns]           descobre e lista peers (DISCOVER)\n"
+        "  /msg <peer_id> <msg>       mensagem direta (SEND, com ACK)\n"
+        "  /pub * <msg>               broadcast para todos os conectados\n"
+        "  /pub #<ns> <msg>           broadcast para um namespace\n"
+        "  /conn                      conexões ativas (inbound/outbound)\n"
+        "  /rtt                       RTT médio por peer\n"
+        "  /reconnect                 força reconciliação/religação\n"
+        "  /log <nível>               ajusta o nível de log (DEBUG/INFO/...)\n"
+        "  /quit                      sai limpando tudo (BYE + UNREGISTER)"
+    )
+
     def __init__(self, client):
         self.client = client
+        self.logger = logging.getLogger("CLI")
+
+    def parse(self, line):
+        line = line.strip()
+        if not line:
+            return None, ""
+        parts = line.split(maxsplit=1)
+        cmd = parts[0].lstrip("/").lower()
+        rest = parts[1] if len(parts) > 1 else ""
+        return cmd, rest
