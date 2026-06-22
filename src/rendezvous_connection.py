@@ -58,6 +58,12 @@ class RendezvousConnection:
             self.logger.warning("Rendezvous sem resposta em %ss", timeout)
             raise RendezvousError("timeout")
         except OSError as exc:
+            # Python 3.11: wait_for pode engolir CancelledError quando a corrotina interna
+            # termina com OSError simultaneamente ao cancelamento externo. Verificar se a
+            # task está sendo cancelada e repropagar CancelledError para não travar o shutdown.
+            task = asyncio.current_task()
+            if task is not None and task.cancelling() > 0:
+                raise asyncio.CancelledError() from exc
             # conexão recusada, DNS falho, rede inacessível: unifica como RendezvousError
             self.logger.warning("Falha de conexão com rendezvous: %s", exc)
             raise RendezvousError("connection_error") from exc

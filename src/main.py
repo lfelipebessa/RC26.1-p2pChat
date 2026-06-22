@@ -1,4 +1,5 @@
 """Ponto de entrada do Chat P2P: carrega config, configura logging e inicia o cliente."""
+import asyncio
 import logging
 
 from config import load_config
@@ -32,12 +33,15 @@ def setup_logging(level: str = "INFO", log_file: str | None = None) -> None:
 def main() -> None:
     config = load_config()
     setup_logging(config.log_level, config.log_file)
-    log = logging.getLogger("main")
-    log.info(
+    logging.getLogger("main").info(
         "Cliente iniciado: %s@%s (escuta na porta %s)",
         config.name, config.namespace, config.listen_port,
     )
-    # Próximas fases: instanciar e rodar o P2PClient aqui (asyncio.run(client.run())).
+    from p2p_client import P2PClient
+    try:
+        asyncio.run(P2PClient(config).run())
+    except KeyboardInterrupt:
+        pass
 
 
 if __name__ == "__main__":
