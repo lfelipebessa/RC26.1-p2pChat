@@ -50,20 +50,42 @@ class PeerConnection:
     async def handshake_outbound(self) -> bool:
         """Nós conectamos: enviamos HELLO e esperamos HELLO_OK."""
         await self.send(self._hello("HELLO"))
-        msg = await read_message(self.reader)
+        self.logger.info("HELLO enviado para peer remoto")   # incluí aqui log p informar q enviamos o Hello
+        #incluí aqui o timeout definido nas especificações com os devidos logs.
+        try:
+            msg = await asyncio.wait_for(read_message(self.reader), timeout = 5.0)
+        except asyncio.TimeoutError:
+            self.logger.warning("Handshake outbound falhou: TimeOut esperando resposta")
+            await self.close() # fecha conexão se houver TimeOut
+            return False
+        except (ConnectionError, OSError) as e:
+            self.logger.warning("Erro de leitura/escrita outbound: fechar conexão")
+            await self.close()
+            return False
+        
         if not msg or msg.get("type") != "HELLO_OK" or not msg.get("peer_id"):
+            self.logger.warning("Handshake outbound falhou: resposta inválida") #incluí log para informar que Hello falhou
+            await self.close() #incluido fechamento automatico em caso de não conexão
             return False
         self.peer_id = msg["peer_id"]
+        self.logger.info("HELLO_OK recebido de %s", self.peer_id) #incluí log para mostrar o recebimento do Hello, Ok.
         self.state = "CONNECTED"
         return True
 
     async def handshake_inbound(self) -> bool:
         """Alguém conectou: esperamos HELLO e respondemos HELLO_OK."""
-        msg = await read_message(self.reader)
+        try:
+            msg = await asyncio.wait_for(read_message(self.reader), timeout=5.0) #timeout incluído
+        except asyncio.TimeoutError:
+            self.logger.warning("Handshake inbound falhou: timeout esperando HELLO")   # >log incluído
+            return False
         if not msg or msg.get("type") != "HELLO" or not msg.get("peer_id"):
+            self.logger.warning("Handshake inbound falhou: mensagem inválida") #inclui log p informar que handshake falhou
             return False
         self.peer_id = msg["peer_id"]
+        self.logger.info("HELLO recebido de %s", self.peer_id) #incluí log p informar que recebemos um Hello
         await self.send(self._hello("HELLO_OK"))
+        self.logger.info("HELLO_OK enviado para %s", self.peer_id) #inclui log p informar que enviamos resposta ao hello
         self.state = "CONNECTED"
         return True
 

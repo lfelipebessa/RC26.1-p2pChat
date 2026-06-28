@@ -205,8 +205,9 @@ class P2PClient:
     async def cmd_msg(self, peer_id, texto):
         try:
             ok = await self.router.send(peer_id, texto)
+            self.logger.info("Mensagem enviada para %s: %s", peer_id, texto) #incluido log aqui.
         except OSError:
-            ok = False; self.table.record_failure(peer_id, "envio falhou")
+            ok = False; self.table.record_failure(peer_id, "envio falhou") 
         print("ACK ok" if ok else "sem ACK (timeout ou sem conexão)")
 
     async def cmd_pub(self, escopo, texto):
