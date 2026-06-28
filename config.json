@@ -2,7 +2,7 @@
   "rendezvous_host": "pyp2p.mfcaetano.cc",
   "rendezvous_port": 8080,
   "namespace": "CIC",
-  "name": "alice",
+  "name": "aluno",
   "listen_port": 4000,
   "register_ttl": 3600,
   "ping_interval": 30,
